@@ -704,10 +704,10 @@ const App = (() => {
           ${p.subtasks && p.subtasks.length ? `<span style="font-size:10px; color:var(--text-dim);">${p.subtasks.filter(s=>s.done).length}/${p.subtasks.length} subtasks</span>` : ''}
         </div>
         <div style="display:flex; justify-content:flex-end; gap:6px;">
-          \${moveBtns}
+          ${moveBtns}
         </div>
       </div>
-    \`;
+    `;
   }
 
   // ===== Calendar =====
