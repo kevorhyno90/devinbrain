@@ -74,7 +74,7 @@ const Sync = (() => {
     if (!db) return;
     
     // Listen to Plans
-    onSnapshot(collection(db, `users/${uid}/plans`), (snapshot) => {
+    onSnapshot(collection(db, `users/${uid}/plans`), async (snapshot) => {
       snapshot.docChanges().forEach(async (change) => {
         if (change.type === "added" || change.type === "modified") {
           await DB.savePlan(change.doc.data(), true); // true = skip cloud push
@@ -91,7 +91,7 @@ const Sync = (() => {
     });
 
     // Listen to Inbox Notes
-    onSnapshot(collection(db, `users/${uid}/notes`), (snapshot) => {
+    onSnapshot(collection(db, `users/${uid}/notes`), async (snapshot) => {
       snapshot.docChanges().forEach(async (change) => {
         if (change.type === "added" || change.type === "modified") {
           await DB.saveNote(change.doc.data(), true);
