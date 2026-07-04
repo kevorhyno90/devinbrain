@@ -15,13 +15,16 @@ const App = (() => {
     pomodoroInterval: null,
     pomodoroTimeLeft: 25 * 60,
     pomodoroActivePlanId: null,
-    pomodoroRunning: false
+    pomodoroRunning: false,
+    inbox: [],
+    promotingInboxId: null
   };
 
   // ===== Init =====
   async function init() {
     await DB.open();
     state.plans = await DB.getAllPlans();
+    state.inbox = await DB.getAllNotes();
     state.aiOnline = (await DB.getSetting('aiOnline', false)) === true;
     state.soundOn = (await DB.getSetting('soundOn', true)) !== false;
     state.lightTheme = (await DB.getSetting('lightTheme', false)) === true;
@@ -174,6 +177,21 @@ const App = (() => {
     document.getElementById('pomodoroResetBtn')?.addEventListener('click', resetPomodoro);
     document.getElementById('pomodoroClose')?.addEventListener('click', closePomodoro);
 
+    // Inbox
+    const inboxInput = document.getElementById('inboxInput');
+    if (inboxInput) {
+      inboxInput.addEventListener('keydown', async (e) => {
+        if (e.key === 'Enter' && inboxInput.value.trim()) {
+          const text = inboxInput.value.trim();
+          inboxInput.value = '';
+          const note = await DB.saveNote({ text, createdAt: new Date().toISOString() });
+          state.inbox.push(note);
+          renderInbox();
+          toast('📥 Added to Inbox', 'success');
+        }
+      });
+    }
+
     // Filters
     document.querySelectorAll('.filter-chip').forEach(el => {
       el.addEventListener('click', () => {
@@ -290,6 +308,7 @@ const App = (() => {
   function renderAll() {
     renderTopbar();
     if (state.currentView === 'dashboard') renderDashboard();
+    if (state.currentView === 'inbox') renderInbox();
     if (state.currentView === 'plans') renderPlans();
     if (state.currentView === 'board') renderBoard();
     if (state.currentView === 'calendar') renderCalendar();
@@ -300,6 +319,8 @@ const App = (() => {
   function renderTopbar() {
     const titles = {
       dashboard: '📊 Dashboard',
+      inbox: '📥 Inbox',
+      board: '🗂️ Board',
       plans: '📋 All Plans',
       calendar: '📅 Calendar',
       reports: '📈 Reports',
@@ -437,6 +458,50 @@ const App = (() => {
         cutout: '60%'
       }
     });
+  }
+
+  // ===== Inbox =====
+  function renderInbox() {
+    const list = document.getElementById('inboxList');
+    if (!list) return;
+
+    if (state.inbox.length === 0) {
+      list.innerHTML = `<div class="empty">
+        <div class="empty-icon">📥</div>
+        <div class="empty-title">Inbox is empty</div>
+        <div>Type above to quickly capture an idea.</div>
+      </div>`;
+      return;
+    }
+
+    list.innerHTML = state.inbox.map(note => {
+      const date = new Date(note.createdAt).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' });
+      return `
+        <div class="inbox-item">
+          <div class="inbox-content">
+            <div>${escape(note.text)}</div>
+            <div class="inbox-date">Added: ${date}</div>
+          </div>
+          <button class="icon-btn" onclick="App.promoteInbox('${note.id}')" title="Promote to Plan">🪄</button>
+          <button class="icon-btn" onclick="App.deleteInbox('${note.id}')" title="Delete">🗑️</button>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function promoteInbox(id) {
+    const note = state.inbox.find(n => n.id === id);
+    if (!note) return;
+    state.promotingInboxId = id;
+    openPlanModal();
+    document.getElementById('planForm').title.value = note.text;
+  }
+
+  async function deleteInbox(id) {
+    if (!confirm('Delete this idea?')) return;
+    await DB.deleteNote(id);
+    state.inbox = state.inbox.filter(n => n.id !== id);
+    renderInbox();
   }
 
   // ===== Plans list =====
@@ -615,6 +680,14 @@ const App = (() => {
 
     await DB.savePlan(plan);
     state.plans = await DB.getAllPlans();
+
+    // If promoted from inbox, delete it
+    if (state.promotingInboxId) {
+      await DB.deleteNote(state.promotingInboxId);
+      state.inbox = state.inbox.filter(n => n.id !== state.promotingInboxId);
+      state.promotingInboxId = null;
+    }
+
     closePlanModal();
     renderAll();
     toast(state.editingPlan ? '✏️ Plan updated' : '✨ Plan created', 'success');
@@ -1110,7 +1183,7 @@ const App = (() => {
   }
 
   // Expose
-  window.App = { init, switchView, openPlanModal, toast };
+  window.App = { init, switchView, openPlanModal, toast, promoteInbox, deleteInbox, editPlan };
 
   return { init, switchView };
 })();

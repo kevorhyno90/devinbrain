@@ -35,6 +35,9 @@
     <div class="nav-item active" data-view="dashboard">
       <span class="nav-icon">📊</span> Dashboard
     </div>
+    <div class="nav-item" data-view="inbox">
+      <span class="nav-icon">📥</span> Inbox
+    </div>
     <div class="nav-item" data-view="board">
       <span class="nav-icon">🗂️</span> Board
     </div>
@@ -199,6 +202,16 @@
           <h3 style="margin-bottom:12px; font-size:14px; text-transform:uppercase; color:var(--text-dim);">Done</h3>
           <div id="boardDone" class="board-list" style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:10px;"></div>
         </div>
+      </div>
+    </div>
+
+    <!-- ===== Inbox View ===== -->
+    <div class="view" id="view-inbox">
+      <div style="margin-bottom: 20px;">
+        <input type="text" id="inboxInput" class="inbox-input" placeholder="Type a quick idea or task and press Enter...">
+      </div>
+      <div id="inboxList" style="display:flex; flex-direction:column; gap:10px;">
+        <!-- Ideas will be rendered here -->
       </div>
     </div>
 
