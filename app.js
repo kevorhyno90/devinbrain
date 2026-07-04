@@ -10,7 +10,12 @@ const App = (() => {
     aiOnline: false,
     soundOn: true,
     reminderCheckInterval: null,
-    deferredInstall: null
+    deferredInstall: null,
+    currentSubtasks: [],
+    pomodoroInterval: null,
+    pomodoroTimeLeft: 25 * 60,
+    pomodoroActivePlanId: null,
+    pomodoroRunning: false
   };
 
   // ===== Init =====
@@ -138,6 +143,37 @@ const App = (() => {
       if (e.target.id === 'modalBackdrop') closePlanModal();
     });
 
+    // Subtasks logic
+    document.getElementById('addSubtaskBtn')?.addEventListener('click', () => {
+      const input = document.getElementById('subtaskInput');
+      if (input.value.trim()) {
+        state.currentSubtasks.push({ title: input.value.trim(), done: false, id: Date.now().toString() });
+        input.value = '';
+        renderSubtaskList();
+      }
+    });
+    document.getElementById('subtaskInput')?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') { e.preventDefault(); document.getElementById('addSubtaskBtn').click(); }
+    });
+    
+    // Subtask toggle/delete delegation
+    document.getElementById('subtaskList')?.addEventListener('click', (e) => {
+      const id = e.target.dataset.subid;
+      if (!id) return;
+      if (e.target.dataset.action === 'toggle') {
+        const sub = state.currentSubtasks.find(s => s.id === id);
+        if (sub) { sub.done = !sub.done; renderSubtaskList(); }
+      } else if (e.target.dataset.action === 'delete') {
+        state.currentSubtasks = state.currentSubtasks.filter(s => s.id !== id);
+        renderSubtaskList();
+      }
+    });
+
+    // Pomodoro logic
+    document.getElementById('pomodoroToggleBtn')?.addEventListener('click', togglePomodoro);
+    document.getElementById('pomodoroResetBtn')?.addEventListener('click', resetPomodoro);
+    document.getElementById('pomodoroClose')?.addEventListener('click', closePomodoro);
+
     // Filters
     document.querySelectorAll('.filter-chip').forEach(el => {
       el.addEventListener('click', () => {
@@ -255,6 +291,7 @@ const App = (() => {
     renderTopbar();
     if (state.currentView === 'dashboard') renderDashboard();
     if (state.currentView === 'plans') renderPlans();
+    if (state.currentView === 'board') renderBoard();
     if (state.currentView === 'calendar') renderCalendar();
     if (state.currentView === 'reports') renderReports();
     renderReminderBanner();
@@ -454,9 +491,12 @@ const App = (() => {
             <span>📅 ${due}</span>
             ${p.reminder ? `<span>🔔 ${p.reminder}m before</span>` : ''}
           </div>
+          </div>
           ${p.notes ? `<div style="margin-top:8px;font-size:12.5px;color:var(--text-dim);">${escape(p.notes)}</div>` : ''}
+          ${p.subtasks && p.subtasks.length ? `<div style="margin-top:8px;font-size:12px;color:var(--text-dim);">Subtasks: ${p.subtasks.filter(s=>s.done).length}/${p.subtasks.length}</div>` : ''}
         </div>
         <div class="plan-actions">
+          <button class="icon-btn" data-action="focus" data-id="${p.id}" title="Focus Mode">⏱️</button>
           <button class="icon-btn" data-action="edit" data-id="${p.id}" title="Edit">✏️</button>
           <button class="icon-btn" data-action="delete" data-id="${p.id}" title="Delete">🗑️</button>
         </div>
@@ -471,6 +511,7 @@ const App = (() => {
         const id = el.dataset.id;
         const action = el.dataset.action;
         if (action === 'toggle') togglePlan(id);
+        else if (action === 'focus') openPomodoro(id);
         else if (action === 'edit') editPlan(id);
         else if (action === 'delete') deletePlan(id);
       });
@@ -520,6 +561,7 @@ const App = (() => {
   // ===== Modal =====
   function openPlanModal(plan = null) {
     state.editingPlan = plan;
+    state.currentSubtasks = plan && plan.subtasks ? JSON.parse(JSON.stringify(plan.subtasks)) : [];
     const modal = document.getElementById('modalBackdrop');
     const form = document.getElementById('planForm');
     document.getElementById('modalTitle').textContent = plan ? 'Edit Plan' : 'New Plan';
@@ -542,6 +584,7 @@ const App = (() => {
       form.priority.value = 'medium';
       form.category.value = 'task';
     }
+    renderSubtaskList();
     modal.classList.add('show');
     setTimeout(() => form.title.focus(), 100);
   }
@@ -562,7 +605,11 @@ const App = (() => {
     plan.reminder = parseInt(form.reminder.value, 10) || 0;
     plan.notes = form.notes.value.trim();
     plan.recurring = form.recurring.value;
+    plan.subtasks = state.currentSubtasks;
     plan.notified = plan.notified || {};
+    
+    // Add board status if not present
+    if (!plan.boardStatus) plan.boardStatus = 'todo';
 
     if (!plan.title) { toast('Title is required', 'error'); return; }
 
@@ -572,6 +619,95 @@ const App = (() => {
     renderAll();
     toast(state.editingPlan ? '✏️ Plan updated' : '✨ Plan created', 'success');
     playSound('chime');
+  }
+
+  function renderSubtaskList() {
+    const list = document.getElementById('subtaskList');
+    if (!list) return;
+    list.innerHTML = state.currentSubtasks.map(s => `
+      <div style="display:flex; align-items:center; justify-content:space-between; background:var(--bg-card); padding:6px 10px; border-radius:6px;">
+        <div style="display:flex; align-items:center; gap:8px;">
+          <input type="checkbox" data-action="toggle" data-subid="${s.id}" ${s.done ? 'checked' : ''}>
+          <span style="${s.done ? 'text-decoration:line-through;color:var(--text-dim);' : 'color:var(--text);'}">${escape(s.title)}</span>
+        </div>
+        <button type="button" data-action="delete" data-subid="${s.id}" style="background:none;border:none;color:var(--text-dim);cursor:pointer;">✕</button>
+      </div>
+    `).join('');
+  }
+
+  // ===== Board =====
+  function renderBoard() {
+    const todos = document.getElementById('boardTodo');
+    const progress = document.getElementById('boardProgress');
+    const done = document.getElementById('boardDone');
+    if (!todos || !progress || !done) return;
+
+    const boardPlans = state.plans.filter(p => p.status !== 'done');
+    
+    const todoHtml = boardPlans.filter(p => !p.boardStatus || p.boardStatus === 'todo').map(p => boardItemHTML(p)).join('');
+    const progressHtml = boardPlans.filter(p => p.boardStatus === 'progress').map(p => boardItemHTML(p)).join('');
+    const doneHtml = state.plans.filter(p => p.status === 'done').map(p => boardItemHTML(p)).join('');
+
+    todos.innerHTML = todoHtml || '<div style="color:var(--text-dim); font-size:12px; text-align:center; padding:20px;">No items</div>';
+    progress.innerHTML = progressHtml || '<div style="color:var(--text-dim); font-size:12px; text-align:center; padding:20px;">No items</div>';
+    done.innerHTML = doneHtml || '<div style="color:var(--text-dim); font-size:12px; text-align:center; padding:20px;">No items</div>';
+    
+    // Attach event listeners for move buttons
+    [todos, progress, done].forEach(container => {
+      container.querySelectorAll('.board-move-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+          e.stopPropagation();
+          const id = btn.dataset.id;
+          const target = btn.dataset.target;
+          const p = state.plans.find(x => x.id === id);
+          if (p) {
+            p.boardStatus = target;
+            if (target === 'done') {
+              p.status = 'done';
+              p.completedAt = new Date().toISOString();
+              playSound('ding');
+              toast('✅ Task completed!', 'success');
+            } else if (p.status === 'done') {
+              p.status = 'pending';
+            }
+            await DB.savePlan(p);
+            state.plans = await DB.getAllPlans();
+            renderAll();
+          }
+        });
+      });
+    });
+  }
+
+  function boardItemHTML(p) {
+    const overdue = p.status !== 'done' && isOverdue(p.dueDate);
+    const due = p.dueDate ? new Date(p.dueDate).toLocaleString('en-US', { dateStyle: 'short', timeStyle: 'short' }) : '';
+    let moveBtns = '';
+    
+    if (!p.boardStatus || p.boardStatus === 'todo') {
+      moveBtns = `<button class="btn btn-sm btn-ghost board-move-btn" data-id="${p.id}" data-target="progress">Start 👉</button>`;
+    } else if (p.boardStatus === 'progress') {
+      moveBtns = `
+        <button class="btn btn-sm btn-ghost board-move-btn" data-id="${p.id}" data-target="todo">👈 Back</button>
+        <button class="btn btn-sm btn-success board-move-btn" data-id="${p.id}" data-target="done">Done ✅</button>
+      `;
+    } else if (p.boardStatus === 'done' || p.status === 'done') {
+      moveBtns = `<button class="btn btn-sm btn-ghost board-move-btn" data-id="${p.id}" data-target="progress">👈 Reopen</button>`;
+    }
+
+    return `
+      <div class="card ${p.category} ${overdue ? 'overdue' : ''}" style="padding:14px; margin-bottom:0; cursor:pointer;" onclick="App.editPlan('${p.id}')">
+        <div style="font-weight:600; font-size:14px; margin-bottom:6px;">${escape(p.title)}</div>
+        <div style="display:flex; gap:6px; flex-wrap:wrap; margin-bottom:10px;">
+          <span class="badge ${p.category}" style="font-size:10px;">${p.category}</span>
+          ${due ? `<span style="font-size:10px; color:var(--text-dim);">📅 ${due}</span>` : ''}
+          ${p.subtasks && p.subtasks.length ? `<span style="font-size:10px; color:var(--text-dim);">${p.subtasks.filter(s=>s.done).length}/${p.subtasks.length} subtasks</span>` : ''}
+        </div>
+        <div style="display:flex; justify-content:flex-end; gap:6px;">
+          \${moveBtns}
+        </div>
+      </div>
+    \`;
   }
 
   // ===== Calendar =====
@@ -698,6 +834,54 @@ const App = (() => {
       // Quick view
       alert(`📅 ${label}\n\n${dayPlans.map(p => `${p.status === 'done' ? '✓' : '•'} ${p.title} [${p.category}/${p.priority}]`).join('\n')}`);
     }
+  }
+
+  // ===== Pomodoro Focus Timer =====
+  function openPomodoro(id) {
+    const p = state.plans.find(x => x.id === id);
+    if (!p) return;
+    state.pomodoroActivePlanId = p.id;
+    document.getElementById('pomodoroTaskTitle').textContent = p.title;
+    document.getElementById('pomodoroWidget').style.transform = 'translateY(0)';
+  }
+  function closePomodoro() {
+    document.getElementById('pomodoroWidget').style.transform = 'translateY(150%)';
+    if(state.pomodoroRunning) togglePomodoro();
+  }
+  function togglePomodoro() {
+    state.pomodoroRunning = !state.pomodoroRunning;
+    const btn = document.getElementById('pomodoroToggleBtn');
+    btn.textContent = state.pomodoroRunning ? 'Pause' : 'Start';
+    if (state.pomodoroRunning) {
+      btn.style.background = 'var(--bg-card)';
+      btn.style.border = '1px solid var(--border)';
+      state.pomodoroInterval = setInterval(() => {
+        if (state.pomodoroTimeLeft > 0) {
+          state.pomodoroTimeLeft--;
+          updatePomodoroUI();
+        } else {
+          togglePomodoro();
+          playSound('chime');
+          toast('🍅 Pomodoro session complete! Take a break.', 'success', 8000);
+          resetPomodoro();
+        }
+      }, 1000);
+    } else {
+      btn.style.background = 'var(--gradient-btn)';
+      btn.style.border = 'none';
+      clearInterval(state.pomodoroInterval);
+    }
+  }
+  function resetPomodoro() {
+    if(state.pomodoroRunning) togglePomodoro();
+    state.pomodoroTimeLeft = 25 * 60;
+    updatePomodoroUI();
+  }
+  function updatePomodoroUI() {
+    const m = Math.floor(state.pomodoroTimeLeft / 60).toString().padStart(2, '0');
+    const s = (state.pomodoroTimeLeft % 60).toString().padStart(2, '0');
+    const el = document.getElementById('pomodoroTime');
+    if(el) el.textContent = `${m}:${s}`;
   }
 
   // ===== Reports =====
