@@ -1,6 +1,6 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { getDatabase, ref, set, onChildAdded, onChildChanged, onChildRemoved, remove } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
 
 const firebaseConfig = {
   apiKey: "AIzaSyAwIghmYSfOYBMJzfYGGrkD5cj9EcMSWgE",
@@ -8,15 +8,17 @@ const firebaseConfig = {
   projectId: "devinbrain-a7f15",
   storageBucket: "devinbrain-a7f15.firebasestorage.app",
   messagingSenderId: "338934237416",
-  appId: "1:338934237416:web:81b5d51b44c8b8c94da15d"
+  appId: "1:338934237416:web:81b5d51b44c8b8c94da15d",
+  databaseURL: "https://devinbrain-a7f15-default-rtdb.firebaseio.com"
 };
 
 let app, auth, db, currentUser = null;
+let listenersInitialized = false;
 
 try {
   app = initializeApp(firebaseConfig);
   auth = getAuth(app);
-  db = getFirestore(app);
+  db = getDatabase(app);
 } catch (e) {
   console.warn("Firebase not configured correctly yet.");
 }
@@ -31,22 +33,24 @@ const Sync = (() => {
       const appShell = document.getElementById('app');
       
       if (user) {
-        // Logged in
         if (landing) landing.style.display = 'none';
         if (appShell) appShell.style.display = 'flex';
-        // Initialize real-time listeners for this user's data
-        startSyncListeners(user.uid);
+        
+        if (!listenersInitialized) {
+          startSyncListeners(user.uid);
+          listenersInitialized = true;
+        }
       } else {
-        // Logged out
         if (landing) landing.style.display = 'flex';
         if (appShell) appShell.style.display = 'none';
+        listenersInitialized = false;
       }
     });
   }
 
   function login() {
     if (!auth) {
-      alert("Please add your Firebase config to sync.js first!");
+      alert("Firebase configuration is invalid or missing.");
       return;
     }
     const provider = new GoogleAuthProvider();
@@ -60,72 +64,77 @@ const Sync = (() => {
     if (auth) signOut(auth);
   }
 
-  // Very basic mock structure for syncing data to Firestore
+  // --- PLANS ---
   async function pushPlanToCloud(plan) {
     if (!currentUser || !db) return;
     try {
-      await setDoc(doc(db, `users/${currentUser.uid}/plans`, plan.id), plan);
-    } catch (e) {
-      console.error("Failed to push plan to cloud", e);
-    }
-  }
-
-  function startSyncListeners(uid) {
-    if (!db) return;
-    
-    // Listen to Plans
-    onSnapshot(collection(db, `users/${uid}/plans`), async (snapshot) => {
-      snapshot.docChanges().forEach(async (change) => {
-        if (change.type === "added" || change.type === "modified") {
-          await DB.savePlan(change.doc.data(), true); // true = skip cloud push
-        }
-        if (change.type === "removed") {
-          await DB.deletePlan(change.doc.data().id, true);
-        }
-      });
-      // Refresh UI if functions are available
-      if (window.App) {
-        if (window.App.state) window.App.state.plans = await DB.getAllPlans();
-        window.App.renderAll && window.App.renderAll();
-      }
-    });
-
-    // Listen to Inbox Notes
-    onSnapshot(collection(db, `users/${uid}/notes`), async (snapshot) => {
-      snapshot.docChanges().forEach(async (change) => {
-        if (change.type === "added" || change.type === "modified") {
-          await DB.saveNote(change.doc.data(), true);
-        }
-        if (change.type === "removed") {
-          await DB.deleteNote(change.doc.data().id, true);
-        }
-      });
-      if (window.App) {
-        if (window.App.state) window.App.state.inbox = await DB.getAllNotes();
-        window.App.renderAll && window.App.renderAll();
-      }
-    });
-  }
-
-  async function pushNoteToCloud(note) {
-    if (!currentUser || !db) return;
-    try {
-      await setDoc(doc(db, `users/${currentUser.uid}/notes`, note.id), note);
-    } catch (e) { console.error("Cloud sync failed", e); }
+      await set(ref(db, `users/${currentUser.uid}/plans/${plan.id}`), plan);
+    } catch (e) { console.error("Cloud plan sync failed", e); }
   }
 
   async function deletePlanFromCloud(id) {
     if (!currentUser || !db) return;
     try {
-      await deleteDoc(doc(db, `users/${currentUser.uid}/plans`, id));
-    } catch (e) { console.error("Cloud delete failed", e); }
+      await remove(ref(db, `users/${currentUser.uid}/plans/${id}`));
+    } catch (e) { console.error("Cloud plan delete failed", e); }
+  }
+
+  // --- NOTES (INBOX) ---
+  async function pushNoteToCloud(note) {
+    if (!currentUser || !db) return;
+    try {
+      await set(ref(db, `users/${currentUser.uid}/notes/${note.id}`), note);
+    } catch (e) { console.error("Cloud note sync failed", e); }
   }
 
   async function deleteNoteFromCloud(id) {
     if (!currentUser || !db) return;
     try {
-      await deleteDoc(doc(db, `users/${currentUser.uid}/notes`, id));
-    } catch (e) { console.error("Cloud delete failed", e); }
+      await remove(ref(db, `users/${currentUser.uid}/notes/${id}`));
+    } catch (e) { console.error("Cloud note delete failed", e); }
+  }
+
+  // --- LISTENERS ---
+  function startSyncListeners(uid) {
+    if (!db) return;
+    
+    // Listen to Plans
+    const plansRef = ref(db, `users/${uid}/plans`);
+    onChildAdded(plansRef, async (snapshot) => {
+      await DB.savePlan(snapshot.val(), true);
+      refreshAppUI();
+    });
+    onChildChanged(plansRef, async (snapshot) => {
+      await DB.savePlan(snapshot.val(), true);
+      refreshAppUI();
+    });
+    onChildRemoved(plansRef, async (snapshot) => {
+      await DB.deletePlan(snapshot.key, true);
+      refreshAppUI();
+    });
+
+    // Listen to Inbox Notes
+    const notesRef = ref(db, `users/${uid}/notes`);
+    onChildAdded(notesRef, async (snapshot) => {
+      await DB.saveNote(snapshot.val(), true);
+      refreshAppUI();
+    });
+    onChildChanged(notesRef, async (snapshot) => {
+      await DB.saveNote(snapshot.val(), true);
+      refreshAppUI();
+    });
+    onChildRemoved(notesRef, async (snapshot) => {
+      await DB.deleteNote(snapshot.key, true);
+      refreshAppUI();
+    });
+  }
+
+  async function refreshAppUI() {
+    if (window.App && window.App.state) {
+      window.App.state.plans = await DB.getAllPlans();
+      window.App.state.inbox = await DB.getAllNotes();
+      if (window.App.renderAll) window.App.renderAll();
+    }
   }
 
   return { initAuthListener, login, logout, pushPlanToCloud, pushNoteToCloud, deletePlanFromCloud, deleteNoteFromCloud };
@@ -133,7 +142,6 @@ const Sync = (() => {
 
 window.Sync = Sync;
 
-// Initialize when DOM is ready
 document.addEventListener('DOMContentLoaded', () => {
   Sync.initAuthListener();
 });
