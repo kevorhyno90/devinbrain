@@ -1,5 +1,5 @@
 // Devin BrainJet Service Worker - Offline support
-const CACHE_NAME = 'brainjet-v1.0.1';
+const CACHE_NAME = 'brainjet-v1.0.2';
 const ASSETS = [
   './',
   './index.html',

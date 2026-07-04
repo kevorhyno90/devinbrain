@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-import { getAuth, signInWithRedirect, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+import { getAuth, signInWithRedirect, getRedirectResult, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 import { getDatabase, ref, set, onChildAdded, onChildChanged, onChildRemoved, remove } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
 
 const firebaseConfig = {
@@ -27,6 +27,12 @@ const Sync = (() => {
 
   function initAuthListener() {
     if (!auth) return;
+    
+    getRedirectResult(auth).catch(error => {
+      console.error("Redirect login error:", error);
+      alert("Login Error: " + error.message);
+    });
+
     onAuthStateChanged(auth, (user) => {
       currentUser = user;
       const landing = document.getElementById('landing-page');
