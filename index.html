@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#ff6b35">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="BrainJet">
+<meta name="description" content="Devin BrainJet — personal long-term life planner. Mind, Farm & Task management. Works offline. Installs as native app.">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<link rel="stylesheet" href="styles.css">
+<title>Devin BrainJet — Your Personal Life Planner</title>
+</head>
+<body>
+
+<div id="app">
+
+  <!-- Sidebar Overlay (mobile) -->
+  <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar">
+    <div class="brand">
+      <div class="brand-logo">🚀</div>
+      <div>
+        <div class="brand-name">Devin BrainJet</div>
+        <div class="brand-tag">Life · Reimagined</div>
+      </div>
+    </div>
+
+    <div class="nav-item active" data-view="dashboard">
+      <span class="nav-icon">📊</span> Dashboard
+    </div>
+    <div class="nav-item" data-view="plans">
+      <span class="nav-icon">📋</span> All Plans
+    </div>
+    <div class="nav-item" data-view="calendar">
+      <span class="nav-icon">📅</span> Calendar
+    </div>
+    <div class="nav-item" data-view="reports">
+      <span class="nav-icon">📈</span> Reports
+    </div>
+    <div class="nav-item" data-view="settings">
+      <span class="nav-icon">⚙️</span> Settings
+    </div>
+
+    <div class="sidebar-section">Quick Actions</div>
+    <button id="quickAddBtn" class="btn" style="width:100%; justify-content:center; margin-bottom:8px;">
+      ➕ New Plan
+    </button>
+    <button id="installBtn" class="btn btn-ghost" style="width:100%; justify-content:center; font-size:12px;">
+      📲 Install App
+    </button>
+
+    <div class="sidebar-section">Shortcuts</div>
+    <div style="font-size:11px; color:var(--text-dim); padding:0 12px; line-height:1.8;">
+      <div><kbd style="background:var(--bg-card); padding:2px 6px; border-radius:4px;">N</kbd> New plan</div>
+      <div><kbd style="background:var(--bg-card); padding:2px 6px; border-radius:4px;">/</kbd> Search</div>
+      <div><kbd style="background:var(--bg-card); padding:2px 6px; border-radius:4px;">Esc</kbd> Close</div>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <main class="main">
+    <div class="topbar">
+      <div style="display:flex; align-items:center; gap:12px;">
+        <button class="hamburger" id="hamburger">☰</button>
+        <div>
+          <h1 id="viewTitle">📊 Dashboard</h1>
+          <div class="topbar-meta" id="topMeta"></div>
+        </div>
+      </div>
+      <div class="topbar-actions">
+        <input type="search" class="search-input" id="searchInput" placeholder="Search plans…">
+        <button class="btn" id="addPlanBtn">➕ Add Plan</button>
+      </div>
+    </div>
+
+    <!-- Install banner -->
+    <div class="install-banner" id="installBanner">
+      <div style="font-size:24px;">📲</div>
+      <div class="install-banner-text">
+        <strong>Install BrainJet</strong> as an app on your device for the best experience — works offline & sends reminders!
+      </div>
+      <button class="btn btn-sm" id="installBannerBtn">Install Now</button>
+    </div>
+
+    <!-- Reminder banner -->
+    <div class="reminder-banner" id="reminderBanner" style="display:none;"></div>
+
+    <!-- ===== Dashboard View ===== -->
+    <div class="view active" id="view-dashboard">
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon">📋</div>
+          <div class="stat-label">Total Plans</div>
+          <div class="stat-value" id="statTotal">0</div>
+          <div class="stat-sub">All categories</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">✅</div>
+          <div class="stat-label">Completed</div>
+          <div class="stat-value" id="statDone">0</div>
+          <div class="stat-sub" id="statRate">0%</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">⏳</div>
+          <div class="stat-label">Pending</div>
+          <div class="stat-value" id="statPending">0</div>
+          <div class="stat-sub">Active plans</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">🔴</div>
+          <div class="stat-label">Overdue</div>
+          <div class="stat-value" id="statOverdue">0</div>
+          <div class="stat-sub">Need attention</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">🌅</div>
+          <div class="stat-label">Today</div>
+          <div class="stat-value" id="statToday">0</div>
+          <div class="stat-sub">Due today</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">📅</div>
+          <div class="stat-label">This Week</div>
+          <div class="stat-value" id="statWeek">0</div>
+          <div class="stat-sub">Next 7 days</div>
+        </div>
+      </div>
+
+      <div class="dash-grid">
+        <div class="card">
+          <div class="card-title">🎯 Focus Today & Overdue</div>
+          <div id="dashTodayList" class="item-list"></div>
+        </div>
+
+        <div class="card">
+          <div class="card-title">📊 Category Distribution</div>
+          <div class="chart-wrap">
+            <canvas id="progressChart"></canvas>
+          </div>
+          <div style="display:flex;justify-content:space-around;margin-top:14px;font-size:12px;">
+            <div style="text-align:center;">
+              <div style="font-size:22px;font-weight:800;color:#c7a8ff;" id="statMind">0</div>
+              <div style="color:var(--text-dim);">🧠 Mind</div>
+            </div>
+            <div style="text-align:center;">
+              <div style="font-size:22px;font-weight:800;color:var(--teal);" id="statFarm">0</div>
+              <div style="color:var(--text-dim);">🌱 Farm</div>
+            </div>
+            <div style="text-align:center;">
+              <div style="font-size:22px;font-weight:800;color:var(--sunset-3);" id="statTask">0</div>
+              <div style="color:var(--text-dim);">⚡ Task</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">🗓️ Upcoming Plans</div>
+        <div id="dashUpcomingList" class="item-list"></div>
+      </div>
+    </div>
+
+    <!-- ===== Plans View ===== -->
+    <div class="view" id="view-plans">
+      <div class="filter-bar">
+        <div style="font-size:11px; color:var(--text-dim); padding:8px 4px; font-weight:700;">CATEGORY:</div>
+        <div class="filter-chip active" data-group="category" data-value="all">All</div>
+        <div class="filter-chip" data-group="category" data-value="mind">🧠 Mind</div>
+        <div class="filter-chip" data-group="category" data-value="farm">🌱 Farm</div>
+        <div class="filter-chip" data-group="category" data-value="task">⚡ Task</div>
+      </div>
+      <div class="filter-bar">
+        <div style="font-size:11px; color:var(--text-dim); padding:8px 4px; font-weight:700;">STATUS:</div>
+        <div class="filter-chip active" data-group="status" data-value="all">All</div>
+        <div class="filter-chip" data-group="status" data-value="pending">Pending</div>
+        <div class="filter-chip" data-group="status" data-value="today">Today</div>
+        <div class="filter-chip" data-group="status" data-value="overdue">Overdue</div>
+        <div class="filter-chip" data-group="status" data-value="done">Completed</div>
+      </div>
+
+      <div class="card">
+        <div id="plansList" class="item-list"></div>
+      </div>
+    </div>
+
+    <!-- ===== Calendar View ===== -->
+    <div class="view" id="view-calendar">
+      <div class="dash-grid">
+        <div class="card">
+          <div class="cal-header">
+            <div class="cal-month" id="calMonth">—</div>
+            <div class="cal-nav">
+              <button class="btn btn-ghost btn-sm" id="calPrev">‹</button>
+              <button class="btn btn-ghost btn-sm" id="calToday">Today</button>
+              <button class="btn btn-ghost btn-sm" id="calNext">›</button>
+            </div>
+          </div>
+          <div class="cal-grid" id="calBody"></div>
+          <div style="margin-top:12px; font-size:12px; color:var(--text-dim); display:flex; gap:14px; flex-wrap:wrap;">
+            <span>🟠 Today</span>
+            <span>🟡 Has plans</span>
+            <span style="margin-left:auto;">💡 Click a day to view/add</span>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">📌 This Month's Plans</div>
+          <div id="calUpcomingList" class="item-list" style="max-height:520px; overflow-y:auto;"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== Reports View ===== -->
+    <div class="view" id="view-reports">
+      <div class="stats-grid">
+        <div class="stat-card"><div class="stat-icon">📋</div><div class="stat-label">Total</div><div class="stat-value" id="reportTotal">0</div></div>
+        <div class="stat-card"><div class="stat-icon">✅</div><div class="stat-label">Completed</div><div class="stat-value" id="reportDone">0</div></div>
+        <div class="stat-card"><div class="stat-icon">⏳</div><div class="stat-label">Pending</div><div class="stat-value" id="reportPending">0</div></div>
+        <div class="stat-card"><div class="stat-icon">🔴</div><div class="stat-label">Overdue</div><div class="stat-value" id="reportOverdue">0</div></div>
+        <div class="stat-card"><div class="stat-icon">📈</div><div class="stat-label">Completion</div><div class="stat-value" id="reportRate">0%</div></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">📄 Generate Reports</div>
+        <p style="color:var(--text-dim); margin-bottom:18px; line-height:1.6;">
+          Download a beautifully formatted PDF report of all your plans, with statistics, category breakdown,
+          completion rates, and a full task list. Perfect for weekly reviews or sharing with mentors/family.
+        </p>
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <button class="btn" id="downloadPdfBtn">📄 Download PDF Report</button>
+          <button class="btn btn-ghost" id="exportBtn">💾 Export JSON Backup</button>
+          <button class="btn btn-ghost" id="importBtn">📥 Import Backup</button>
+          <input type="file" id="importFile" accept=".json" style="display:none">
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:18px;">
+        <div class="card-title">📚 How to Use BrainJet</div>
+        <div style="line-height:1.8; color:var(--text-dim); font-size:13.5px;">
+          <p>🌅 <strong>BrainJet</strong> is your personal life command center. Organize plans across 3 categories:</p>
+          <ul style="margin:10px 0 14px 22px;">
+            <li><strong style="color:#c7a8ff;">🧠 Mind</strong> — spiritual reflection, learning, mental wellness, personal growth</li>
+            <li><strong style="color:var(--teal);">🌱 Farm</strong> — crops, livestock, equipment, harvests, soil care</li>
+            <li><strong style="color:var(--sunset-3);">⚡ Task</strong> — family time, errands, work, household, anything else</li>
+          </ul>
+          <p>⚡ <strong>Features:</strong></p>
+          <ul style="margin:10px 0 14px 22px;">
+            <li>Works <strong>100% offline</strong> — your data stays on your device</li>
+            <li><strong>Strict date system</strong> with multi-stage reminders (before, due, overdue)</li>
+            <li>Install as native app — find it on your home screen</li>
+            <li>Free AI assistant (Jet) — chat anytime for help</li>
+            <li>Download <strong>PDF reports</strong> anytime for printing or sharing</li>
+            <li>Export/import JSON backups for safekeeping</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== Settings View ===== -->
+    <div class="view" id="view-settings">
+      <div class="card">
+        <div class="card-title">⚙️ Preferences</div>
+        <div class="form-grid">
+          <div class="form-group" style="display:flex; justify-content:space-between; align-items:center;">
+            <div>
+              <label style="margin-bottom:4px;">🌐 Online AI Boost</label>
+              <div style="font-size:12px; color:var(--text-dim);">When online, use more powerful AI (free, no signup)</div>
+            </div>
+            <label class="switch" style="position:relative; display:inline-block; width:50px; height:26px;">
+              <input type="checkbox" id="aiOnlineToggle" style="opacity:0; width:0; height:0;">
+              <span style="position:absolute; cursor:pointer; inset:0; background:var(--bg-card); border-radius:26px; transition:.3s;"></span>
+            </label>
+          </div>
+          <div class="form-group" style="display:flex; justify-content:space-between; align-items:center;">
+            <div>
+              <label style="margin-bottom:4px;">🔊 Sound Alerts</label>
+              <div style="font-size:12px; color:var(--text-dim);">Play sound on reminders & task completion</div>
+            </div>
+            <label class="switch" style="position:relative; display:inline-block; width:50px; height:26px;">
+              <input type="checkbox" id="soundToggle" checked style="opacity:0; width:0; height:0;">
+              <span style="position:absolute; cursor:pointer; inset:0; background:var(--bg-card); border-radius:26px; transition:.3s;"></span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:18px;">
+        <div class="card-title">💾 Data Management</div>
+        <p style="color:var(--text-dim); margin-bottom:14px; font-size:13px;">
+          All data is stored locally on your device using IndexedDB. Nothing is sent to any server.
+          Back up regularly to keep your data safe across devices.
+        </p>
+        <div style="display:flex; gap:10px; flex-wrap:wrap;">
+          <button class="btn btn-success" onclick="document.getElementById('exportBtn').click()">💾 Export Backup</button>
+          <button class="btn btn-ghost" onclick="document.getElementById('importBtn').click()">📥 Import Backup</button>
+          <button class="btn btn-danger" id="clearBtn">🗑️ Clear All Data</button>
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:18px;">
+        <div class="card-title">ℹ️ About</div>
+        <div style="line-height:1.8; color:var(--text-dim); font-size:13px;">
+          <strong style="color:var(--cream);">Devin BrainJet v1.0</strong><br>
+          A personal long-term life planner — your mind, farm, and tasks in one place.<br>
+          Built as a Progressive Web App with offline support, native notifications, and a free AI assistant.<br><br>
+          <em>"You are the CEO of your life. Lead boldly." 👑</em>
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+
+<!-- ===== AI Chat ===== -->
+<button class="ai-fab" id="aiFab" title="Chat with Jet (AI)">🤖</button>
+<div class="ai-panel" id="aiPanel">
+  <div class="ai-header">
+    <div class="ai-avatar">🌅</div>
+    <div class="ai-info" style="flex:1;">
+      <h4>Jet · Your AI Assistant</h4>
+      <p>Online & ready</p>
+    </div>
+    <button class="modal-close" onclick="document.getElementById('aiPanel').classList.remove('show')">×</button>
+  </div>
+  <div class="ai-messages" id="aiMessages"></div>
+  <div class="ai-suggestions" id="aiSuggestions"></div>
+  <div class="ai-input-row">
+    <input type="text" class="ai-input" id="aiInput" placeholder="Ask Jet anything…">
+    <button class="ai-send" id="aiSend">➤</button>
+  </div>
+</div>
+
+<!-- ===== Plan Modal ===== -->
+<div class="modal-backdrop" id="modalBackdrop">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modalTitle">New Plan</div>
+      <button class="modal-close" id="modalClose">×</button>
+    </div>
+    <form id="planForm">
+      <div class="form-grid">
+        <div class="form-group">
+          <label>Title *</label>
+          <input type="text" name="title" class="form-input" placeholder="e.g., Feed livestock at sunrise" required>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Category</label>
+            <select name="category" class="form-select">
+              <option value="task">⚡ Task</option>
+              <option value="mind">🧠 Mind</option>
+              <option value="farm">🌱 Farm</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Priority</label>
+            <select name="priority" class="form-select">
+              <option value="low">🟢 Low</option>
+              <option value="medium" selected>🟡 Medium</option>
+              <option value="high">🔴 High</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Due Date & Time</label>
+            <input type="datetime-local" name="dueDate" class="form-input">
+          </div>
+          <div class="form-group">
+            <label>Reminder Before</label>
+            <select name="reminder" class="form-select">
+              <option value="0">No reminder</option>
+              <option value="5">5 minutes</option>
+              <option value="15">15 minutes</option>
+              <option value="30" selected>30 minutes</option>
+              <option value="60">1 hour</option>
+              <option value="120">2 hours</option>
+              <option value="1440">1 day</option>
+              <option value="2880">2 days</option>
+              <option value="10080">1 week</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Recurring</label>
+          <select name="recurring" class="form-select">
+            <option value="none">One-time</option>
+            <option value="daily">Daily</option>
+            <option value="weekly">Weekly</option>
+            <option value="monthly">Monthly</option>
+            <option value="yearly">Yearly</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Notes</label>
+          <textarea name="notes" class="form-textarea" placeholder="Add details, context, or steps…"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" id="cancelBtn">Cancel</button>
+        <button type="submit" class="btn">💾 Save Plan</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<div class="toast-container" id="toastContainer"></div>
+
+<!-- Libraries -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+
+<!-- App scripts -->
+<script src="db.js"></script>
+<script src="ai.js"></script>
+<script src="pdf.js"></script>
+<script src="app.js"></script>
+
+<style>
+  /* Toggle switch styling */
+  .switch input:checked + span { background: var(--gradient-btn) !important; }
+  .switch span::before {
+    content: ''; position: absolute;
+    height: 20px; width: 20px;
+    left: 3px; bottom: 3px;
+    background: white; border-radius: 50%;
+    transition: .3s;
+  }
+  .switch input:checked + span::before { transform: translateX(24px); }
+</style>
+
+</body>
+</html>
