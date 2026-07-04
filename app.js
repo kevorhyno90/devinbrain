@@ -424,8 +424,8 @@ const App = (() => {
         labels: ['Mind', 'Farm', 'Task', 'Fitness', 'Finance'],
         datasets: [{
           data: [counts.mind, counts.farm, counts.task, counts.fitness, counts.finance],
-          backgroundColor: ['#9b5de5', '#06d6a0', '#ff6b35', '#f15bb5', '#00bbf9'],
-          borderColor: 'rgba(255,255,255,0.1)',
+          backgroundColor: ['#00f0ff', '#39ff14', '#ff003c', '#ff00ff', '#ffd700'],
+          borderColor: 'rgba(255,255,255,0.05)',
           borderWidth: 2
         }]
       },
