@@ -1,5 +1,5 @@
 // Devin BrainJet Service Worker - Offline support
-const CACHE_NAME = 'brainjet-v1.0.0';
+const CACHE_NAME = 'brainjet-v1.0.1';
 const ASSETS = [
   './',
   './index.html',
@@ -35,16 +35,23 @@ self.addEventListener('activate', (event) => {
 
 self.addEventListener('fetch', (event) => {
   if (event.request.method !== 'GET') return;
+  
   event.respondWith(
-    caches.match(event.request).then((cached) => {
-      if (cached) return cached;
-      return fetch(event.request).then((response) => {
-        if (response.ok && event.request.url.startsWith('http')) {
-          const clone = response.clone();
-          caches.open(CACHE_NAME).then(c => c.put(event.request, clone)).catch(()=>{});
+    caches.match(event.request).then((cachedResponse) => {
+      // Stale-While-Revalidate Strategy
+      const fetchPromise = fetch(event.request).then((networkResponse) => {
+        if (networkResponse.ok && event.request.url.startsWith('http')) {
+          caches.open(CACHE_NAME).then((cache) => {
+            cache.put(event.request, networkResponse.clone());
+          }).catch(()=>{});
         }
-        return response;
-      }).catch(() => caches.match('./index.html'));
+        return networkResponse;
+      }).catch(() => {
+        // If network fails and no cache exists, fallback to index
+        return caches.match('./index.html');
+      });
+      
+      return cachedResponse || fetchPromise;
     })
   );
 });
