@@ -19,6 +19,9 @@ const App = (() => {
     state.plans = await DB.getAllPlans();
     state.aiOnline = (await DB.getSetting('aiOnline', false)) === true;
     state.soundOn = (await DB.getSetting('soundOn', true)) !== false;
+    state.lightTheme = (await DB.getSetting('lightTheme', false)) === true;
+    
+    if (state.lightTheme) document.body.classList.add('light-theme');
 
     bindEvents();
     registerSW();
@@ -185,6 +188,16 @@ const App = (() => {
     document.getElementById('installBannerBtn')?.addEventListener('click', triggerInstall);
 
     // Settings
+    const themeToggle = document.getElementById('themeToggle');
+    if (themeToggle) {
+      themeToggle.checked = state.lightTheme;
+      themeToggle.addEventListener('change', async (e) => {
+        state.lightTheme = e.target.checked;
+        document.body.classList.toggle('light-theme', state.lightTheme);
+        await DB.setSetting('lightTheme', state.lightTheme);
+      });
+    }
+
     document.getElementById('aiOnlineToggle')?.addEventListener('change', async (e) => {
       state.aiOnline = e.target.checked;
       await DB.setSetting('aiOnline', state.aiOnline);
@@ -193,6 +206,13 @@ const App = (() => {
     document.getElementById('soundToggle')?.addEventListener('change', async (e) => {
       state.soundOn = e.target.checked;
       await DB.setSetting('soundOn', state.soundOn);
+    });
+
+    // AI Advice
+    document.getElementById('aiAdviceBtn')?.addEventListener('click', () => {
+      toggleAI();
+      document.getElementById('aiInput').value = "Give me advice for today's tasks.";
+      sendAI();
     });
 
     // AI Chat
@@ -307,9 +327,14 @@ const App = (() => {
     const mind = state.plans.filter(p => p.category === 'mind').length;
     const farm = state.plans.filter(p => p.category === 'farm').length;
     const task = state.plans.filter(p => p.category === 'task').length;
+    const fitness = state.plans.filter(p => p.category === 'fitness').length;
+    const finance = state.plans.filter(p => p.category === 'finance').length;
+    
     document.getElementById('statMind').textContent = mind;
     document.getElementById('statFarm').textContent = farm;
     document.getElementById('statTask').textContent = task;
+    const elFit = document.getElementById('statFitness'); if(elFit) elFit.textContent = fitness;
+    const elFin = document.getElementById('statFinance'); if(elFin) elFin.textContent = finance;
 
     // Today's plans list
     const todayPlans = state.plans
@@ -350,23 +375,19 @@ const App = (() => {
   function renderChart() {
     const canvas = document.getElementById('progressChart');
     if (!canvas || !window.Chart) return;
-    const mind = { total: 0, done: 0 };
-    const farm = { total: 0, done: 0 };
-    const task = { total: 0, done: 0 };
+    const counts = { mind:0, farm:0, task:0, fitness:0, finance:0 };
     state.plans.forEach(p => {
-      const c = p.category === 'mind' ? mind : p.category === 'farm' ? farm : task;
-      c.total++;
-      if (p.status === 'done') c.done++;
+      if (counts[p.category] !== undefined) counts[p.category]++;
     });
 
     if (chartInstance) chartInstance.destroy();
     chartInstance = new Chart(canvas, {
       type: 'doughnut',
       data: {
-        labels: ['Mind', 'Farm', 'Task'],
+        labels: ['Mind', 'Farm', 'Task', 'Fitness', 'Finance'],
         datasets: [{
-          data: [mind.total, farm.total, task.total],
-          backgroundColor: ['#9b5de5', '#06d6a0', '#ff6b35'],
+          data: [counts.mind, counts.farm, counts.task, counts.fitness, counts.finance],
+          backgroundColor: ['#9b5de5', '#06d6a0', '#ff6b35', '#f15bb5', '#00bbf9'],
           borderColor: 'rgba(255,255,255,0.1)',
           borderWidth: 2
         }]
@@ -421,14 +442,15 @@ const App = (() => {
     const overdue = p.status !== 'done' && isOverdue(p.dueDate);
     const done = p.status === 'done';
     const due = p.dueDate ? new Date(p.dueDate).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' }) : 'No date';
+    const recurIcon = p.recurring && p.recurring !== 'none' ? ' 🔄' : '';
     return `
-      <div class="plan-item ${p.category} ${done ? 'done' : ''} ${overdue ? 'overdue' : ''}" data-id="${p.id}">
+      <div class="plan-item ${p.category} ${done ? 'done' : ''} ${overdue ? 'overdue' : ''}" data-id="${p.id}" draggable="true">
         <div class="plan-check ${done ? 'checked' : ''}" data-action="toggle" data-id="${p.id}">${done ? '✓' : ''}</div>
         <div class="plan-content">
-          <div class="plan-title">${escape(p.title)}</div>
+          <div class="plan-title">${escape(p.title)}${recurIcon}</div>
           <div class="plan-meta">
             <span class="badge ${p.category}">${p.category}</span>
-            <span class="badge ${p.priority}">${p.priority}</span>
+            <span class="badge priority-${p.priority}">${p.priority}</span>
             <span>📅 ${due}</span>
             ${p.reminder ? `<span>🔔 ${p.reminder}m before</span>` : ''}
           </div>
@@ -463,6 +485,19 @@ const App = (() => {
       p.completedAt = new Date().toISOString();
       playSound('ding');
       toast('✅ Task completed! Great work!', 'success');
+      
+      // Handle recurrence
+      if (p.recurring && p.recurring !== 'none' && p.dueDate) {
+        let nextDate = new Date(p.dueDate);
+        if (p.recurring === 'daily') nextDate.setDate(nextDate.getDate() + 1);
+        if (p.recurring === 'weekly') nextDate.setDate(nextDate.getDate() + 7);
+        if (p.recurring === 'monthly') nextDate.setMonth(nextDate.getMonth() + 1);
+        if (p.recurring === 'yearly') nextDate.setFullYear(nextDate.getFullYear() + 1);
+        
+        const nextPlan = { ...p, id: null, status: 'pending', dueDate: nextDate.toISOString().slice(0, 16), notified: {} };
+        await DB.savePlan(nextPlan);
+        toast('🔄 Next recurring task scheduled!', 'success');
+      }
     }
     await DB.savePlan(p);
     state.plans = await DB.getAllPlans();
@@ -603,10 +638,47 @@ const App = (() => {
       if (upcoming.length === 0) {
         upList.innerHTML = '<div class="empty"><div class="empty-icon">📅</div><div>No plans this month</div></div>';
       } else {
-        upList.innerHTML = upcoming.slice(0, 12).map(p => planItemHTML(p)).join('');
+        upList.innerHTML = upcoming.map(p => planItemHTML(p)).join('');
         attachPlanHandlers(upList);
       }
     }
+    
+    // Drag and Drop Logic
+    document.querySelectorAll('.plan-item[draggable="true"]').forEach(el => {
+      el.addEventListener('dragstart', e => {
+        e.dataTransfer.setData('text/plain', el.dataset.id);
+        el.style.opacity = '0.5';
+      });
+      el.addEventListener('dragend', e => {
+        el.style.opacity = '1';
+      });
+    });
+
+    calBody.querySelectorAll('.cal-day[data-date]').forEach(el => {
+      el.addEventListener('dragover', e => {
+        e.preventDefault();
+        el.style.background = 'var(--gradient-card)';
+      });
+      el.addEventListener('dragleave', e => {
+        el.style.background = '';
+      });
+      el.addEventListener('drop', async e => {
+        e.preventDefault();
+        el.style.background = '';
+        const id = e.dataTransfer.getData('text/plain');
+        const plan = state.plans.find(p => p.id === id);
+        if (plan) {
+          const newDate = new Date(el.dataset.date);
+          const oldDate = new Date(plan.dueDate || Date.now());
+          newDate.setHours(oldDate.getHours(), oldDate.getMinutes());
+          plan.dueDate = newDate.toISOString().slice(0, 16);
+          await DB.savePlan(plan);
+          state.plans = await DB.getAllPlans();
+          renderAll();
+          toast('📅 Plan rescheduled!', 'success');
+        }
+      });
+    });
   }
 
   function showDayPlans(date) {

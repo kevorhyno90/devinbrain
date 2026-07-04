@@ -143,21 +143,35 @@
           <div class="chart-wrap">
             <canvas id="progressChart"></canvas>
           </div>
-          <div style="display:flex;justify-content:space-around;margin-top:14px;font-size:12px;">
+          <div style="display:flex;justify-content:space-around;margin-top:14px;font-size:12px;flex-wrap:wrap;gap:10px;">
             <div style="text-align:center;">
-              <div style="font-size:22px;font-weight:800;color:#c7a8ff;" id="statMind">0</div>
+              <div style="font-size:20px;font-weight:800;color:var(--color-mind);" id="statMind">0</div>
               <div style="color:var(--text-dim);">🧠 Mind</div>
             </div>
             <div style="text-align:center;">
-              <div style="font-size:22px;font-weight:800;color:var(--teal);" id="statFarm">0</div>
+              <div style="font-size:20px;font-weight:800;color:var(--color-farm);" id="statFarm">0</div>
               <div style="color:var(--text-dim);">🌱 Farm</div>
             </div>
             <div style="text-align:center;">
-              <div style="font-size:22px;font-weight:800;color:var(--sunset-3);" id="statTask">0</div>
+              <div style="font-size:20px;font-weight:800;color:var(--color-task);" id="statTask">0</div>
               <div style="color:var(--text-dim);">⚡ Task</div>
+            </div>
+            <div style="text-align:center;">
+              <div style="font-size:20px;font-weight:800;color:var(--color-fitness);" id="statFitness">0</div>
+              <div style="color:var(--text-dim);">🏋️ Fit</div>
+            </div>
+            <div style="text-align:center;">
+              <div style="font-size:20px;font-weight:800;color:var(--color-finance);" id="statFinance">0</div>
+              <div style="color:var(--text-dim);">💰 Fin</div>
             </div>
           </div>
         </div>
+      </div>
+
+      <div style="display:flex; justify-content:center; margin: 20px 0;">
+        <button class="btn" id="aiAdviceBtn" style="width:100%; max-width:400px; justify-content:center; background:var(--gradient-accent);">
+          🤖 Get AI Advice for Today
+        </button>
       </div>
 
       <div class="card">
@@ -174,6 +188,8 @@
         <div class="filter-chip" data-group="category" data-value="mind">🧠 Mind</div>
         <div class="filter-chip" data-group="category" data-value="farm">🌱 Farm</div>
         <div class="filter-chip" data-group="category" data-value="task">⚡ Task</div>
+        <div class="filter-chip" data-group="category" data-value="fitness">🏋️ Fitness</div>
+        <div class="filter-chip" data-group="category" data-value="finance">💰 Finance</div>
       </div>
       <div class="filter-bar">
         <div style="font-size:11px; color:var(--text-dim); padding:8px 4px; font-weight:700;">STATUS:</div>
@@ -244,9 +260,11 @@
         <div style="line-height:1.8; color:var(--text-dim); font-size:13.5px;">
           <p>🌅 <strong>BrainJet</strong> is your personal life command center. Organize plans across 3 categories:</p>
           <ul style="margin:10px 0 14px 22px;">
-            <li><strong style="color:#c7a8ff;">🧠 Mind</strong> — spiritual reflection, learning, mental wellness, personal growth</li>
-            <li><strong style="color:var(--teal);">🌱 Farm</strong> — crops, livestock, equipment, harvests, soil care</li>
-            <li><strong style="color:var(--sunset-3);">⚡ Task</strong> — family time, errands, work, household, anything else</li>
+            <li><strong style="color:var(--color-mind);">🧠 Mind</strong> — spiritual reflection, learning, mental wellness</li>
+            <li><strong style="color:var(--color-farm);">🌱 Farm</strong> — crops, livestock, equipment, harvests</li>
+            <li><strong style="color:var(--color-task);">⚡ Task</strong> — family time, errands, work, household</li>
+            <li><strong style="color:var(--color-fitness);">🏋️ Fitness</strong> — workouts, health, diet</li>
+            <li><strong style="color:var(--color-finance);">💰 Finance</strong> — budgeting, bills, investments</li>
           </ul>
           <p>⚡ <strong>Features:</strong></p>
           <ul style="margin:10px 0 14px 22px;">
@@ -266,6 +284,16 @@
       <div class="card">
         <div class="card-title">⚙️ Preferences</div>
         <div class="form-grid">
+          <div class="form-group" style="display:flex; justify-content:space-between; align-items:center;">
+            <div>
+              <label style="margin-bottom:4px;">🌗 Theme</label>
+              <div style="font-size:12px; color:var(--text-dim);">Switch between light and dark mode</div>
+            </div>
+            <label class="switch" style="position:relative; display:inline-block; width:50px; height:26px;">
+              <input type="checkbox" id="themeToggle" style="opacity:0; width:0; height:0;">
+              <span style="position:absolute; cursor:pointer; inset:0; background:var(--bg-card); border-radius:26px; transition:.3s;"></span>
+            </label>
+          </div>
           <div class="form-group" style="display:flex; justify-content:space-between; align-items:center;">
             <div>
               <label style="margin-bottom:4px;">🌐 Online AI Boost</label>
@@ -355,6 +383,8 @@
               <option value="task">⚡ Task</option>
               <option value="mind">🧠 Mind</option>
               <option value="farm">🌱 Farm</option>
+              <option value="fitness">🏋️ Fitness</option>
+              <option value="finance">💰 Finance</option>
             </select>
           </div>
           <div class="form-group">
