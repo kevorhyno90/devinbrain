@@ -65,7 +65,7 @@ const Sync = (() => {
   async function pushPlanToCloud(plan) {
     if (!currentUser || !db) return;
     try {
-      await setDoc(doc(db, \`users/\${currentUser.uid}/plans\`, plan.id), plan);
+      await setDoc(doc(db, `users/${currentUser.uid}/plans`, plan.id), plan);
     } catch (e) {
       console.error("Failed to push plan to cloud", e);
     }
@@ -74,7 +74,7 @@ const Sync = (() => {
   function startSyncListeners(uid) {
     if (!db) return;
     // Example: listen to cloud changes and update local DB
-    // onSnapshot(collection(db, \`users/\${uid}/plans\`), (snapshot) => {
+    // onSnapshot(collection(db, `users/${uid}/plans`), (snapshot) => {
     //   snapshot.docChanges().forEach((change) => {
     //     if (change.type === "added" || change.type === "modified") {
     //       DB.savePlan(change.doc.data()); // Overwrites local with cloud
