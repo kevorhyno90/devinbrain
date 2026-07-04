@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
+import { getAuth, signInWithRedirect, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
 import { getDatabase, ref, set, onChildAdded, onChildChanged, onChildRemoved, remove } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
 
 const firebaseConfig = {
@@ -54,7 +54,7 @@ const Sync = (() => {
       return;
     }
     const provider = new GoogleAuthProvider();
-    signInWithPopup(auth, provider).catch(error => {
+    signInWithRedirect(auth, provider).catch(error => {
       console.error("Login failed", error);
       alert("Login failed: " + error.message);
     });
