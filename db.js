@@ -55,7 +55,7 @@ const DB = (() => {
     });
   }
 
-  async function savePlan(plan) {
+  async function savePlan(plan, skipCloud = false) {
     if (!plan.id) plan.id = 'p_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
     if (!plan.createdAt) plan.createdAt = new Date().toISOString();
     plan.updatedAt = new Date().toISOString();
@@ -63,18 +63,21 @@ const DB = (() => {
     return new Promise((res, rej) => {
       const r = s.put(plan);
       r.onsuccess = () => {
-        if (window.Sync) window.Sync.pushPlanToCloud(plan);
+        if (!skipCloud && window.Sync) window.Sync.pushPlanToCloud(plan);
         res(plan);
       };
       r.onerror = () => rej(r.error);
     });
   }
 
-  async function deletePlan(id) {
+  async function deletePlan(id, skipCloud = false) {
     const s = await tx('plans', 'readwrite');
     return new Promise((res, rej) => {
       const r = s.delete(id);
-      r.onsuccess = () => res(true);
+      r.onsuccess = () => {
+        if (!skipCloud && window.Sync) window.Sync.deletePlanFromCloud(id);
+        res(true);
+      };
       r.onerror = () => rej(r.error);
     });
   }
@@ -116,22 +119,28 @@ const DB = (() => {
     });
   }
 
-  async function saveNote(note) {
+  async function saveNote(note, skipCloud = false) {
     if (!note.id) note.id = 'n_' + Date.now();
     note.updatedAt = new Date().toISOString();
     const s = await tx('notes', 'readwrite');
     return new Promise((res, rej) => {
       const r = s.put(note);
-      r.onsuccess = () => res(note);
+      r.onsuccess = () => {
+        if (!skipCloud && window.Sync) window.Sync.pushNoteToCloud(note);
+        res(note);
+      };
       r.onerror = () => rej(r.error);
     });
   }
 
-  async function deleteNote(id) {
+  async function deleteNote(id, skipCloud = false) {
     const s = await tx('notes', 'readwrite');
     return new Promise((res, rej) => {
       const r = s.delete(id);
-      r.onsuccess = () => res(true);
+      r.onsuccess = () => {
+        if (!skipCloud && window.Sync) window.Sync.deleteNoteFromCloud(id);
+        res(true);
+      };
       r.onerror = () => rej(r.error);
     });
   }

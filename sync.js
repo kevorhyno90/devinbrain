@@ -1,15 +1,14 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
 import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-import { getFirestore, collection, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
+import { getFirestore, collection, doc, setDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js";
 
-// TODO: Replace this with your actual Firebase config
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-  projectId: "YOUR_PROJECT_ID",
-  storageBucket: "YOUR_PROJECT_ID.appspot.com",
-  messagingSenderId: "YOUR_SENDER_ID",
-  appId: "YOUR_APP_ID"
+  apiKey: "AIzaSyAwIghmYSfOYBMJzfYGGrkD5cj9EcMSWgE",
+  authDomain: "devinbrain-a7f15.firebaseapp.com",
+  projectId: "devinbrain-a7f15",
+  storageBucket: "devinbrain-a7f15.firebasestorage.app",
+  messagingSenderId: "338934237416",
+  appId: "1:338934237416:web:81b5d51b44c8b8c94da15d"
 };
 
 let app, auth, db, currentUser = null;
@@ -73,18 +72,63 @@ const Sync = (() => {
 
   function startSyncListeners(uid) {
     if (!db) return;
-    // Example: listen to cloud changes and update local DB
-    // onSnapshot(collection(db, `users/${uid}/plans`), (snapshot) => {
-    //   snapshot.docChanges().forEach((change) => {
-    //     if (change.type === "added" || change.type === "modified") {
-    //       DB.savePlan(change.doc.data()); // Overwrites local with cloud
-    //     }
-    //   });
-    //   if (window.App && window.App.renderAll) window.App.renderAll();
-    // });
+    
+    // Listen to Plans
+    onSnapshot(collection(db, `users/${uid}/plans`), (snapshot) => {
+      snapshot.docChanges().forEach(async (change) => {
+        if (change.type === "added" || change.type === "modified") {
+          await DB.savePlan(change.doc.data(), true); // true = skip cloud push
+        }
+        if (change.type === "removed") {
+          await DB.deletePlan(change.doc.data().id, true);
+        }
+      });
+      // Refresh UI if functions are available
+      if (window.App) {
+        if (window.App.state) window.App.state.plans = await DB.getAllPlans();
+        window.App.renderAll && window.App.renderAll();
+      }
+    });
+
+    // Listen to Inbox Notes
+    onSnapshot(collection(db, `users/${uid}/notes`), (snapshot) => {
+      snapshot.docChanges().forEach(async (change) => {
+        if (change.type === "added" || change.type === "modified") {
+          await DB.saveNote(change.doc.data(), true);
+        }
+        if (change.type === "removed") {
+          await DB.deleteNote(change.doc.data().id, true);
+        }
+      });
+      if (window.App) {
+        if (window.App.state) window.App.state.inbox = await DB.getAllNotes();
+        window.App.renderAll && window.App.renderAll();
+      }
+    });
   }
 
-  return { initAuthListener, login, logout, pushPlanToCloud };
+  async function pushNoteToCloud(note) {
+    if (!currentUser || !db) return;
+    try {
+      await setDoc(doc(db, `users/${currentUser.uid}/notes`, note.id), note);
+    } catch (e) { console.error("Cloud sync failed", e); }
+  }
+
+  async function deletePlanFromCloud(id) {
+    if (!currentUser || !db) return;
+    try {
+      await deleteDoc(doc(db, `users/${currentUser.uid}/plans`, id));
+    } catch (e) { console.error("Cloud delete failed", e); }
+  }
+
+  async function deleteNoteFromCloud(id) {
+    if (!currentUser || !db) return;
+    try {
+      await deleteDoc(doc(db, `users/${currentUser.uid}/notes`, id));
+    } catch (e) { console.error("Cloud delete failed", e); }
+  }
+
+  return { initAuthListener, login, logout, pushPlanToCloud, pushNoteToCloud, deletePlanFromCloud, deleteNoteFromCloud };
 })();
 
 window.Sync = Sync;
