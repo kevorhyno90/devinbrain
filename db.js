@@ -62,7 +62,10 @@ const DB = (() => {
     const s = await tx('plans', 'readwrite');
     return new Promise((res, rej) => {
       const r = s.put(plan);
-      r.onsuccess = () => res(plan);
+      r.onsuccess = () => {
+        if (window.Sync) window.Sync.pushPlanToCloud(plan);
+        res(plan);
+      };
       r.onerror = () => rej(r.error);
     });
   }

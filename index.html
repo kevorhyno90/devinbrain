@@ -17,7 +17,40 @@
 </head>
 <body>
 
-<div id="app">
+  <!-- Landing Page -->
+  <div id="landing-page" class="landing-page">
+    <div class="landing-nav">
+      <div class="brand">
+        <div class="brand-logo">🚀</div>
+        <div class="brand-name">Devin BrainJet</div>
+      </div>
+      <button class="btn btn-ghost" onclick="Sync.login()">Sign In</button>
+    </div>
+    <div class="landing-hero">
+      <h1 class="landing-title">Life · <span class="neon-text">Reimagined</span></h1>
+      <p class="landing-subtitle">The offline-first personal long-term life planner designed to synchronize your Mind, Farm & Tasks across all devices.</p>
+      <button class="btn landing-cta" onclick="Sync.login()">Get Started for Free</button>
+    </div>
+    <div class="landing-features">
+      <div class="feature-card">
+        <div class="feature-icon">⚡</div>
+        <h3>Offline First</h3>
+        <p>Works perfectly without internet. Syncs automatically when you're back online.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🗂️</div>
+        <h3>Kanban Board</h3>
+        <p>Visualize your tasks and move them effortlessly through your pipeline.</p>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">🤖</div>
+        <h3>AI Assistant</h3>
+        <p>Chat with your personal AI to brainstorm, plan, and execute your goals.</p>
+      </div>
+    </div>
+  </div>
+
+<div id="app" style="display: none;">
 
   <!-- Sidebar Overlay (mobile) -->
   <div class="sidebar-overlay" id="sidebarOverlay"></div>
@@ -58,8 +91,11 @@
     <button id="quickAddBtn" class="btn" style="width:100%; justify-content:center; margin-bottom:8px;">
       ➕ New Plan
     </button>
-    <button id="installBtn" class="btn btn-ghost" style="width:100%; justify-content:center; font-size:12px;">
+    <button id="installBtn" class="btn btn-ghost" style="width:100%; justify-content:center; font-size:12px; margin-bottom:8px;">
       📲 Install App
+    </button>
+    <button class="btn btn-ghost" onclick="Sync.logout()" style="width:100%; justify-content:center; font-size:12px; color:var(--sunset-1);">
+      🚪 Sign Out
     </button>
 
     <div class="sidebar-section">Shortcuts</div>
@@ -504,10 +540,14 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 
 <!-- App scripts -->
+<script type="module" src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js"></script>
+<script type="module" src="https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js"></script>
+<script type="module" src="https://www.gstatic.com/firebasejs/10.8.1/firebase-firestore.js"></script>
 <script src="db.js"></script>
-<script src="ai.js"></script>
 <script src="pdf.js"></script>
-<script src="app.js"></script>
+<script src="ai.js"></script>
+<script type="module" src="sync.js"></script>
+<script type="module" src="app.js"></script>
 
 <style>
   /* Toggle switch styling */
