@@ -135,12 +135,16 @@ const Sync = (() => {
     });
   }
 
+  let refreshTimeout = null;
   async function refreshAppUI() {
-    if (window.App && window.App.state) {
-      window.App.state.plans = await DB.getAllPlans();
-      window.App.state.inbox = await DB.getAllNotes();
-      if (window.App.renderAll) window.App.renderAll();
-    }
+    if (refreshTimeout) clearTimeout(refreshTimeout);
+    refreshTimeout = setTimeout(async () => {
+      if (window.App && window.App.state) {
+        window.App.state.plans = await DB.getAllPlans();
+        window.App.state.inbox = await DB.getAllNotes();
+        if (window.App.renderAll) window.App.renderAll();
+      }
+    }, 100);
   }
 
   return { initAuthListener, login, logout, pushPlanToCloud, pushNoteToCloud, deletePlanFromCloud, deleteNoteFromCloud };
