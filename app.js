@@ -148,6 +148,9 @@ const App = (() => {
     document.getElementById('dayViewModal')?.addEventListener('click', (e) => {
       if (e.target.id === 'dayViewModal') e.target.classList.remove('show');
     });
+    document.getElementById('confirmModal')?.addEventListener('click', (e) => {
+      if (e.target.id === 'confirmModal') e.target.classList.remove('show');
+    });
 
     // Subtasks logic
     document.getElementById('addSubtaskBtn')?.addEventListener('click', () => {
@@ -500,11 +503,12 @@ const App = (() => {
     document.getElementById('planForm').title.value = note.text;
   }
 
-  async function deleteInbox(id) {
-    if (!confirm('Delete this idea?')) return;
-    await DB.deleteNote(id);
-    state.inbox = state.inbox.filter(n => n.id !== id);
-    renderInbox();
+  function deleteInbox(id) {
+    customConfirm('Delete Idea', 'Delete this idea?', async () => {
+      await DB.deleteNote(id);
+      state.inbox = state.inbox.filter(n => n.id !== id);
+      renderInbox();
+    });
   }
 
   // ===== Plans list =====
@@ -613,12 +617,13 @@ const App = (() => {
     renderAll();
   }
 
-  async function deletePlan(id) {
-    if (!confirm('Delete this plan? This cannot be undone.')) return;
-    await DB.deletePlan(id);
-    state.plans = await DB.getAllPlans();
-    renderAll();
-    toast('🗑️ Plan deleted', 'warning');
+  function deletePlan(id) {
+    customConfirm('Delete Plan', 'Delete this plan? This cannot be undone.', async () => {
+      await DB.deletePlan(id);
+      state.plans = await DB.getAllPlans();
+      renderAll();
+      toast('🗑️ Plan deleted', 'warning');
+    });
   }
 
   function editPlan(id) {
@@ -1022,13 +1027,13 @@ const App = (() => {
     e.target.value = '';
   }
 
-  async function clearAllData() {
-    if (!confirm('⚠️ DELETE ALL DATA?\n\nThis will remove all plans, notes, and chat history. This cannot be undone.')) return;
-    if (!confirm('Are you 100% sure?')) return;
-    await DB.clearAll();
-    state.plans = [];
-    renderAll();
-    toast('🗑️ All data cleared', 'warning');
+  function clearAllData() {
+    customConfirm('⚠️ DELETE ALL DATA', 'This will remove all plans, notes, and chat history. This cannot be undone. Are you sure?', async () => {
+      await DB.clearAll();
+      state.plans = [];
+      renderAll();
+      toast('🗑️ All data cleared', 'warning');
+    });
   }
 
   // ===== Reminder loop =====
@@ -1191,6 +1196,24 @@ const App = (() => {
     if (diff < 1440) return `in ${Math.round(diff/60)}h`;
     return `on ${new Date(s).toLocaleDateString()}`;
   }
+  function customConfirm(title, message, onConfirm) {
+    const modal = document.getElementById('confirmModal');
+    if (!modal) return;
+    document.getElementById('confirmTitle').textContent = title;
+    document.getElementById('confirmBody').textContent = message;
+    
+    document.getElementById('confirmCancelBtn').onclick = () => {
+      modal.classList.remove('show');
+    };
+    
+    document.getElementById('confirmOkBtn').onclick = () => {
+      modal.classList.remove('show');
+      onConfirm();
+    };
+    
+    modal.classList.add('show');
+  }
+
   function escape(s) {
     return String(s || '').replace(/[<>&"]/g, c => ({ '<':'&lt;', '>':'&gt;', '&':'&amp;', '"':'&quot;' })[c]);
   }

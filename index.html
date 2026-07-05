@@ -534,6 +534,23 @@
   </div>
 </div>
 
+<!-- ===== Confirm Modal ===== -->
+<div class="modal-backdrop" id="confirmModal">
+  <div class="modal" style="max-width:350px;">
+    <div class="modal-header">
+      <div class="modal-title" id="confirmTitle">Confirm</div>
+      <button class="modal-close" onclick="document.getElementById('confirmModal').classList.remove('show')">×</button>
+    </div>
+    <div class="modal-body" id="confirmBody" style="padding: 15px 0 25px 0; color: var(--text);">
+      Are you sure?
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-ghost" id="confirmCancelBtn">Cancel</button>
+      <button type="button" class="btn btn-danger" id="confirmOkBtn">Yes, Delete</button>
+    </div>
+  </div>
+</div>
+
 <!-- ===== Pomodoro Timer Widget ===== -->
 <div class="pomodoro-widget" id="pomodoroWidget" style="position:fixed; bottom:20px; left:20px; background:var(--bg-card); backdrop-filter:blur(16px); border:1px solid var(--border); border-radius:16px; padding:16px; box-shadow:var(--shadow); z-index:90; display:flex; flex-direction:column; gap:10px; width:220px; transition:transform 0.4s cubic-bezier(0.4, 0, 0.2, 1); transform:translateY(150%);">
   <div style="display:flex; justify-content:space-between; align-items:center;">
