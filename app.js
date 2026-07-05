@@ -1227,7 +1227,7 @@ const App = (() => {
   }
 
   // Expose
-  window.App = { init, switchView, openPlanModal, toast, promoteInbox, deleteInbox, editPlan };
+  window.App = { init, switchView, openPlanModal, toast, promoteInbox, deleteInbox, editPlan, state, renderAll };
 
   return { init, switchView };
 })();
