@@ -145,6 +145,9 @@ const App = (() => {
     document.getElementById('modalBackdrop')?.addEventListener('click', (e) => {
       if (e.target.id === 'modalBackdrop') closePlanModal();
     });
+    document.getElementById('dayViewModal')?.addEventListener('click', (e) => {
+      if (e.target.id === 'dayViewModal') e.target.classList.remove('show');
+    });
 
     // Subtasks logic
     document.getElementById('addSubtaskBtn')?.addEventListener('click', () => {
@@ -897,16 +900,34 @@ const App = (() => {
       return pd.toDateString() === date.toDateString();
     });
     const label = date.toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    const modal = document.getElementById('dayViewModal');
+    if (!modal) return;
+    
+    document.getElementById('dayViewTitle').textContent = `📅 ${label}`;
+    const body = document.getElementById('dayViewBody');
+    
     if (dayPlans.length === 0) {
-      if (confirm(`No plans on ${label}.\n\nCreate one?`)) {
-        const t = new Date(date); t.setHours(9, 0, 0, 0);
-        openPlanModal();
-        document.getElementById('planForm').dueDate.value = t.toISOString().slice(0, 16);
-      }
+      body.innerHTML = `<p style="text-align:center; color:var(--text-dim); margin: 20px 0;">No plans on this day.</p>`;
     } else {
-      // Quick view
-      alert(`📅 ${label}\n\n${dayPlans.map(p => `${p.status === 'done' ? '✓' : '•'} ${p.title} [${p.category}/${p.priority}]`).join('\n')}`);
+      body.innerHTML = dayPlans.map(p => 
+        `<div style="padding:10px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:10px;">
+          <span style="font-size:16px;">${p.status === 'done' ? '✓' : '•'}</span>
+          <div style="flex:1;">
+            <div style="font-weight:600; color:var(--cream);">${escape(p.title)}</div>
+            <div style="font-size:12px; color:var(--text-dim); text-transform:capitalize;">${escape(p.category)} · ${escape(p.priority)} Priority</div>
+          </div>
+        </div>`
+      ).join('');
     }
+    
+    document.getElementById('dayViewCreateBtn').onclick = () => {
+      modal.classList.remove('show');
+      const t = new Date(date); t.setHours(9, 0, 0, 0);
+      openPlanModal();
+      document.getElementById('planForm').dueDate.value = t.toISOString().slice(0, 16);
+    };
+    
+    modal.classList.add('show');
   }
 
   // ===== Pomodoro Focus Timer =====

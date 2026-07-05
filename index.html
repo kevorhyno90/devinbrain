@@ -518,6 +518,22 @@
   </div>
 </div>
 
+<!-- ===== Day View Modal ===== -->
+<div class="modal-backdrop" id="dayViewModal">
+  <div class="modal" style="max-width:400px;">
+    <div class="modal-header">
+      <div class="modal-title" id="dayViewTitle">Day Plans</div>
+      <button class="modal-close" onclick="document.getElementById('dayViewModal').classList.remove('show')">×</button>
+    </div>
+    <div class="modal-body" id="dayViewBody" style="padding: 15px; color: var(--text); max-height: 400px; overflow-y: auto;">
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-ghost" onclick="document.getElementById('dayViewModal').classList.remove('show')">Close</button>
+      <button type="button" class="btn" id="dayViewCreateBtn">➕ Create Plan</button>
+    </div>
+  </div>
+</div>
+
 <!-- ===== Pomodoro Timer Widget ===== -->
 <div class="pomodoro-widget" id="pomodoroWidget" style="position:fixed; bottom:20px; left:20px; background:var(--bg-card); backdrop-filter:blur(16px); border:1px solid var(--border); border-radius:16px; padding:16px; box-shadow:var(--shadow); z-index:90; display:flex; flex-direction:column; gap:10px; width:220px; transition:transform 0.4s cubic-bezier(0.4, 0, 0.2, 1); transform:translateY(150%);">
   <div style="display:flex; justify-content:space-between; align-items:center;">
