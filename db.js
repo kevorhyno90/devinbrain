@@ -62,11 +62,11 @@ const DB = (() => {
     const s = await tx('plans', 'readwrite');
     return new Promise((res, rej) => {
       const r = s.put(plan);
-      r.onsuccess = () => {
+      s.transaction.oncomplete = () => {
         if (!skipCloud && window.Sync) window.Sync.pushPlanToCloud(plan);
         res(plan);
       };
-      r.onerror = () => rej(r.error);
+      s.transaction.onerror = () => rej(s.transaction.error || r.error);
     });
   }
 
@@ -74,11 +74,11 @@ const DB = (() => {
     const s = await tx('plans', 'readwrite');
     return new Promise((res, rej) => {
       const r = s.delete(id);
-      r.onsuccess = () => {
+      s.transaction.oncomplete = () => {
         if (!skipCloud && window.Sync) window.Sync.deletePlanFromCloud(id);
         res(true);
       };
-      r.onerror = () => rej(r.error);
+      s.transaction.onerror = () => rej(s.transaction.error || r.error);
     });
   }
 
@@ -104,8 +104,8 @@ const DB = (() => {
     const s = await tx('settings', 'readwrite');
     return new Promise((res, rej) => {
       const r = s.put({ key, value });
-      r.onsuccess = () => res(true);
-      r.onerror = () => rej(r.error);
+      s.transaction.oncomplete = () => res(true);
+      s.transaction.onerror = () => rej(s.transaction.error || r.error);
     });
   }
 
@@ -125,11 +125,11 @@ const DB = (() => {
     const s = await tx('notes', 'readwrite');
     return new Promise((res, rej) => {
       const r = s.put(note);
-      r.onsuccess = () => {
+      s.transaction.oncomplete = () => {
         if (!skipCloud && window.Sync) window.Sync.pushNoteToCloud(note);
         res(note);
       };
-      r.onerror = () => rej(r.error);
+      s.transaction.onerror = () => rej(s.transaction.error || r.error);
     });
   }
 
@@ -137,11 +137,11 @@ const DB = (() => {
     const s = await tx('notes', 'readwrite');
     return new Promise((res, rej) => {
       const r = s.delete(id);
-      r.onsuccess = () => {
+      s.transaction.oncomplete = () => {
         if (!skipCloud && window.Sync) window.Sync.deleteNoteFromCloud(id);
         res(true);
       };
-      r.onerror = () => rej(r.error);
+      s.transaction.onerror = () => rej(s.transaction.error || r.error);
     });
   }
 
