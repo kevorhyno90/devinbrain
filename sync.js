@@ -1,6 +1,7 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js";
-import { getAuth, signInWithRedirect, getRedirectResult, GoogleAuthProvider, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js";
-import { getDatabase, ref, set, onChildAdded, onChildChanged, onChildRemoved, remove } from "https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js";
+let app, auth, db, currentUser = null;
+let listenersInitialized = false;
+let initializeApp, getAuth, signInWithRedirect, getRedirectResult, GoogleAuthProvider, onAuthStateChanged, signOut;
+let getDatabase, ref, set, onChildAdded, onChildChanged, onChildRemoved, remove;
 
 const firebaseConfig = {
   apiKey: "AIzaSyAwIghmYSfOYBMJzfYGGrkD5cj9EcMSWgE",
@@ -12,21 +13,51 @@ const firebaseConfig = {
   databaseURL: "https://devinbrain-a7f15-default-rtdb.firebaseio.com"
 };
 
-let app, auth, db, currentUser = null;
-let listenersInitialized = false;
+async function initFirebase() {
+  if (app) return true;
+  try {
+    const appModule = await import("https://www.gstatic.com/firebasejs/10.8.1/firebase-app.js");
+    initializeApp = appModule.initializeApp;
+    
+    const authModule = await import("https://www.gstatic.com/firebasejs/10.8.1/firebase-auth.js");
+    getAuth = authModule.getAuth;
+    signInWithRedirect = authModule.signInWithRedirect;
+    getRedirectResult = authModule.getRedirectResult;
+    GoogleAuthProvider = authModule.GoogleAuthProvider;
+    onAuthStateChanged = authModule.onAuthStateChanged;
+    signOut = authModule.signOut;
+    
+    const dbModule = await import("https://www.gstatic.com/firebasejs/10.8.1/firebase-database.js");
+    getDatabase = dbModule.getDatabase;
+    ref = dbModule.ref;
+    set = dbModule.set;
+    onChildAdded = dbModule.onChildAdded;
+    onChildChanged = dbModule.onChildChanged;
+    onChildRemoved = dbModule.onChildRemoved;
+    remove = dbModule.remove;
 
-try {
-  app = initializeApp(firebaseConfig);
-  auth = getAuth(app);
-  db = getDatabase(app);
-} catch (e) {
-  console.warn("Firebase not configured correctly yet.");
+    app = initializeApp(firebaseConfig);
+    auth = getAuth(app);
+    db = getDatabase(app);
+    return true;
+  } catch (e) {
+    console.warn("Firebase not configured correctly yet or offline.", e);
+    return false;
+  }
 }
 
 const Sync = (() => {
 
-  function initAuthListener() {
-    if (!auth) return;
+  async function initAuthListener() {
+    const loaded = await initFirebase();
+    if (!loaded || !auth) {
+      // Offline fallback: allow access to local app
+      const landing = document.getElementById('landing-page');
+      const appShell = document.getElementById('app');
+      if (landing) landing.style.display = 'none';
+      if (appShell) appShell.style.display = 'flex';
+      return;
+    }
     
     getRedirectResult(auth).catch(error => {
       console.error("Redirect login error:", error);
@@ -54,9 +85,10 @@ const Sync = (() => {
     });
   }
 
-  function login() {
+  async function login() {
+    await initFirebase();
     if (!auth) {
-      alert("Firebase configuration is invalid or missing.");
+      alert("Firebase configuration is invalid or missing (Offline).");
       return;
     }
     const provider = new GoogleAuthProvider();
