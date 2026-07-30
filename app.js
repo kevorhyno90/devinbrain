@@ -563,7 +563,6 @@ const App = (() => {
             <span>📅 ${due}</span>
             ${p.reminder ? `<span>🔔 ${p.reminder}m before</span>` : ''}
           </div>
-          </div>
           ${p.notes ? `<div style="margin-top:8px;font-size:12.5px;color:var(--text-dim);">${escape(p.notes)}</div>` : ''}
           ${p.subtasks && p.subtasks.length ? `<div style="margin-top:8px;font-size:12px;color:var(--text-dim);">Subtasks: ${p.subtasks.filter(s=>s.done).length}/${p.subtasks.length}</div>` : ''}
         </div>
