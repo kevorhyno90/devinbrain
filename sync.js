@@ -16,10 +16,10 @@ const firebaseConfig = {
 async function initFirebase() {
   if (app) return true;
   try {
-    const appModule = await import("https://www.gstatic.com/firebasejs/10.14.1/firebase-app.js");
+    const appModule = await import("https://www.gstatic.com/firebasejs/11.1.0/firebase-app.js");
     initializeApp = appModule.initializeApp;
     
-    const authModule = await import("https://www.gstatic.com/firebasejs/10.14.1/firebase-auth.js");
+    const authModule = await import("https://www.gstatic.com/firebasejs/11.1.0/firebase-auth.js");
     getAuth = authModule.getAuth;
     signInWithRedirect = authModule.signInWithRedirect;
     getRedirectResult = authModule.getRedirectResult;
@@ -27,7 +27,7 @@ async function initFirebase() {
     onAuthStateChanged = authModule.onAuthStateChanged;
     signOut = authModule.signOut;
     
-    const dbModule = await import("https://www.gstatic.com/firebasejs/10.14.1/firebase-database.js");
+    const dbModule = await import("https://www.gstatic.com/firebasejs/11.1.0/firebase-database.js");
     getDatabase = dbModule.getDatabase;
     ref = dbModule.ref;
     set = dbModule.set;
